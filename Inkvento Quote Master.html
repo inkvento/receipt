@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inkvento - Master Smart Quotation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --inkvento-pink: #FF108A; --inkvento-light: #FF94D1; --bg-gray: #f9f9f9; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 40px; background: #e9ecef; color: #333; }
+        .invoice-box { max-width: 900px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding-bottom: 20px; }
+        header { background: linear-gradient(135deg, var(--inkvento-light), var(--inkvento-pink)); padding: 30px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .studio-name h1 { margin: 0; font-size: 48px; font-weight: 800; letter-spacing: -1px; }
+        .service-list { font-size: 11px; opacity: 0.9; text-align: right; line-height: 1.4; }
+        .invoice-body { padding: 40px; }
+        .meta-row { display: flex; justify-content: space-between; border-bottom: 2px solid var(--bg-gray); padding-bottom: 20px; margin-bottom: 20px; }
+        .client-info-grid { display: grid; grid-template-columns: 100px 1fr; gap: 5px; font-size: 13px; margin-bottom: 20px; }
+        .label { font-weight: bold; color: var(--inkvento-pink); text-transform: uppercase; font-size: 10px; align-self: center; }
+        .field { padding: 4px; border-bottom: 1px dashed #ddd; min-height: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+        th { background: #333; color: #fff; text-align: left; padding: 12px; font-size: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .qty, .price, .row-total { text-align: right; width: 100px; }
+        .summary-container { display: flex; justify-content: space-between; margin-top: 20px; gap: 20px; }
+        .payment-channels { flex: 1.2; border: 1px solid #eee; border-radius: 6px; padding: 15px; background: var(--bg-gray); }
+        .payment-grid { display: grid; grid-template-columns: 80px 1fr 140px; gap: 8px; font-size: 11px; margin-top: 10px; }
+        .pg-head { font-weight: bold; color: var(--inkvento-pink); border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+        .totals-box { width: 300px; font-weight: bold; }
+        .totals-box div { display: flex; justify-content: space-between; padding: 10px; border-radius: 4px; margin-bottom: 5px; }
+        .sub { background: #eee; }
+        .dp { background: #fff0f6; color: var(--inkvento-pink); }
+        .bal { background: var(--inkvento-pink); color: #fff; font-size: 1.2em; }
+        footer { padding: 10px 40px; font-size: 11px; color: #666; }
+        .footer-bottom { text-align: center; color: #999; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .controls { text-align: center; margin-bottom: 20px; position: sticky; top: 0; z-index: 100; background: #e9ecef; padding: 10px; }
+        .btn { background: #333; color: white; border: none; padding: 12px 20px; cursor: pointer; border-radius: 4px; margin: 5px; font-weight: bold; }
+        .btn-log { background: #00b894; } .btn-pink { background: var(--inkvento-pink); }
+        [contenteditable]:hover { background: #fffde7; outline: none; }
+        @media print { .no-print { display: none; } body { padding: 0; background: white; } .invoice-box { box-shadow: none; border: none; width: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="controls no-print">
+    <button class="btn btn-log" onclick="logToSheet()">🚀 LOG TO TRACKER</button>
+    <button class="btn btn-pink" onclick="window.print()">SAVE AS PDF</button>
+    <button class="btn" onclick="downloadJPG()">DOWNLOAD AS JPEG</button>
+</div>
+
+<div class="invoice-box" id="captureArea">
+    <header>
+        <div class="studio-name"><h1>Inkvento</h1><p style="margin:0; font-weight:bold; letter-spacing: 2px;">PRINTING & DESIGN STUDIO</p></div>
+        <div class="service-list">Photocards • Stickers • Flyers • Posters • Apparel<br>Mugs • Souvenirs • Packaging Solutions<br><b>inkventoph@gmail.com</b></div>
+    </header>
+
+    <div class="invoice-body">
+        <div class="meta-row">
+            <div><h2 style="margin:0; color:var(--inkvento-pink)">QUOTATION</h2><small>Invoice No: #<span id="invNum" contenteditable="true">119600</span></small></div>
+            <div style="text-align: right; font-size: 13px;"><strong>Date:</strong> <span id="currentDate"></span><br><strong>Lead Time:</strong> <span contenteditable="true">5-7 Working Days</span><br><strong>MOQ:</strong> <span contenteditable="true">50 pieces</span></div>
+        </div>
+
+        <div class="client-info-grid">
+            <div class="label">Company:</div> <div class="field" id="clientName" contenteditable="true">IVORY PHOENIX DISTRIBUTION INC.</div>
+            <div class="label">Contact:</div> <div class="field" id="contactPerson" contenteditable="true">[Contact Person Name]</div>
+            <div class="label">Address:</div> <div class="field" contenteditable="true">RCS Bldg., #117 H, Matatag St., Diliman, Quezon City</div>
+            <div class="label">TIN:</div> <div class="field" contenteditable="true">010-129-983-000</div>
+        </div>
+
+        <table id="invoiceTable">
+            <thead><tr><th>DESCRIPTION</th><th class="qty">QTY</th><th class="price">PRICE/PC</th><th class="row-total">TOTAL</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td contenteditable="true">REGULAR FLIP W/ RIBBON [SPRING GREEN] 15x15x4IN</td>
+                    <td contenteditable="true" class="qty" oninput="doMath()">10</td>
+                    <td contenteditable="true" class="price" oninput="doMath()">385.00</td>
+                    <td class="row-total">3,850.00</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="btn no-print" style="font-size: 10px; padding: 5px 10px;" onclick="addRow()">+ Add Line Item</button>
+
+        <div class="summary-container">
+            <div class="payment-channels">
+                <div class="label">Payment Channels:</div>
+                <div class="payment-grid">
+                    <div class="pg-head">Bank/App</div> <div class="pg-head">Account Name</div> <div class="pg-head">Account Number</div>
+                    <strong>METROBANK</strong> <div contenteditable="true">Tria Valentina R. U.</div> <div contenteditable="true">514-3-514-63725-4</div>
+                    <strong>GCASH</strong> <div contenteditable="true">Tria Valentina R. U.</div> <div contenteditable="true">09XX-XXX-XXXX</div>
+                    <strong>MAYA</strong> <div contenteditable="true">Tria Valentina R. U.</div> <div contenteditable="true">09XX-XXX-XXXX</div>
+                </div>
+            </div>
+            <div class="totals-box">
+                <div class="sub"><span>SUBTOTAL</span> ₱<span id="subTotal">3,850.00</span></div>
+                <div class="dp"><span>50% REQUIRED DP</span> ₱<span id="dpAmount">1,925.00</span></div>
+                <div class="bal"><span>BALANCE</span> ₱<span id="balAmount">1,925.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="reminders"><strong>Important Notes:</strong><ul><li>All item prices are inclusive of tax.</li><li>Production will start only upon settlement of the 50% downpayment.</li><li>Remaining balance must be settled before turnover/delivery of items.</li></ul></div>
+        <div class="footer-bottom"><p style="font-size: 14px; color: var(--inkvento-pink); font-weight: bold;">Thank you!</p><p><b>Inkvento Printing & Design Studio</b> | DTI Registered 2025</p>
+        <p style="font-size: 9px; margin-top: 15px; opacity: 0.6;">* This is a formal quotation/statement and not a BIR Official Receipt.</p></div>
+    </footer>
+</div>
+
+<script>
+    // YOUR UPDATED WEB APP URL
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx6Y-ez_eOBBHVvaUdpbelimg1xLxvI85AGLnrzKNKjNYn6Y0X3C7hOMYVC5kjBWYfSkQ/exec";
+
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    function doMath() {
+        let grand = 0;
+        document.querySelectorAll("#invoiceTable tbody tr").forEach(row => {
+            let q = parseFloat(row.querySelector(".qty").innerText.replace(/,/g,'')) || 0;
+            let p = parseFloat(row.querySelector(".price").innerText.replace(/,/g,'')) || 0;
+            let t = q * p;
+            row.querySelector(".row-total").innerText = t.toLocaleString(undefined, {minimumFractionDigits: 2});
+            grand += t;
+        });
+        document.getElementById("subTotal").innerText = grand.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById("dpAmount").innerText = (grand * 0.5).toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById("balAmount").innerText = (grand * 0.5).toLocaleString(undefined, {minimumFractionDigits: 2});
+    }
+
+    function addRow() {
+        const table = document.getElementById("invoiceTable").getElementsByTagName('tbody')[0];
+        const row = table.insertRow();
+        row.innerHTML = `<td contenteditable="true">New Item Name</td><td contenteditable="true" class="qty" oninput="doMath()">1</td><td contenteditable="true" class="price" oninput="doMath()">0.00</td><td class="row-total">0.00</td>`;
+    }
+
+    function logToSheet() {
+        let orderSummary = "";
+        document.querySelectorAll("#invoiceTable tbody tr").forEach(row => {
+            let desc = row.cells[0].innerText;
+            let qty = row.cells[1].innerText;
+            if(desc !== "New Item Name") { orderSummary += `${qty}x ${desc} | `; }
+        });
+
+        const data = {
+            clientName: document.getElementById('clientName').innerText,
+            contactPerson: document.getElementById('contactPerson').innerText,
+            invoiceNum: document.getElementById('invNum').innerText,
+            orders: orderSummary,
+            dp: document.getElementById('dpAmount').innerText,
+            subtotal: document.getElementById('subTotal').innerText
+        };
+        
+        // This sends the data to your Google Sheet
+        fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(data), mode: "no-cors" })
+        .then(() => alert("Logged to INKVENTO_INTERNAL TRACKER! 🚀"))
+        .catch(err => alert("Error logging. Check your internet!"));
+    }
+
+    function downloadJPG() {
+        const area = document.getElementById('captureArea');
+        html2canvas(area, { scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Quotation_${document.getElementById('invNum').innerText}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        });
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inkvento - Official Smart Invoice</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --inkvento-pink: #FF108A; --inkvento-light: #FF94D1; --bg-gray: #f4f4f4; }
+        body { font-family: 'Segoe UI', Helvetica, sans-serif; margin: 0; padding: 20px; background: #e9ecef; }
+        .invoice-box { max-width: 850px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        
+        /* HEADER FIX */
+        .brand-header { width: 100%; height: 220px; background: var(--inkvento-pink); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .brand-header img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        .header-overlay { position: relative; color: white; text-align: center; z-index: 1; text-shadow: 2px 2px 10px rgba(0,0,0,0.3); pointer-events: none; }
+
+        .invoice-body { padding: 40px; }
+        .meta-section { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        
+        /* CLIENT INFO ALIGNMENT */
+        .grid-info { display: grid; grid-template-columns: 120px 1fr; gap: 8px; font-size: 13px; margin-bottom: 20px; }
+        .label { font-weight: bold; color: var(--inkvento-pink); text-transform: uppercase; font-size: 10px; align-self: center; }
+        .field { border-bottom: 1px dashed #ddd; padding: 4px; min-height: 18px; }
+
+        /* TABLE ALIGNMENT FIX */
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #333; color: #fff; text-align: left; padding: 12px; font-size: 11px; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .text-right { text-align: right !important; }
+        .price-col { width: 130px; padding-right: 20px; }
+        .total-col { width: 130px; font-weight: bold; }
+
+        /* CLEARER PAYMENT BOXES */
+        .payment-summary { display: grid; grid-template-columns: 1fr 340px; gap: 20px; margin-top: 30px; }
+        .status-box { background: var(--bg-gray); padding: 15px; border-radius: 6px; font-size: 12px; border-left: 5px solid var(--inkvento-pink); }
+        
+        .totals-container { display: flex; flex-direction: column; gap: 5px; }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 6px; font-weight: bold; }
+        .row.grand { background: #f0f0f0; color: #000; }
+        .row.dp { background: #fff0f6; color: var(--inkvento-pink); border: 1px solid var(--inkvento-light); }
+        .row.balance { background: var(--inkvento-pink); color: #fff; font-size: 1.1em; box-shadow: 0 4px 0 #d60d74; }
+        .row span:last-child { font-family: 'Courier New', monospace; font-size: 1.2em; }
+
+        .no-print { text-align: center; padding: 15px; background: #e9ecef; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #ccc; }
+        .btn { padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; margin: 5px; text-transform: uppercase; font-size: 11px; transition: 0.2s; }
+        .btn-log { background: #00b894; color: white; }
+        .btn-viber { background: #7360f2; color: white; }
+        .btn-pdf { background: #333; color: white; }
+        
+        @media print { .no-print { display: none; } body { padding: 0; background: white; } .invoice-box { box-shadow: none; border: none; width: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <button class="btn btn-log" onclick="logToSheet()">🚀 LOG TO SALES</button>
+    <button class="btn btn-pdf" onclick="window.print()">📄 PRINT AS PDF</button>
+    <button class="btn btn-viber" onclick="downloadJPG()">📸 SAVE FOR VIBER</button>
+</div>
+
+<div class="invoice-box" id="captureArea">
+    <div class="brand-header">
+        <img src="INKVENTO_COVER PHOTO.jpg" alt="">
+        <div class="header-overlay">
+            <h1 style="margin:0; font-size: 40px; letter-spacing: 5px;">INKVENTO</h1>
+            <p style="margin:0; font-weight: 300;">PRINTING & DESIGN STUDIO</p>
+        </div>
+    </div>
+
+    <div class="invoice-body">
+        <div class="meta-section">
+            <div>
+                <h2 style="margin:0; color:var(--inkvento-pink); letter-spacing: 1px;">OFFICIAL INVOICE</h2>
+                <p style="margin:5px 0 0 0;">INV #: <span id="invNum" contenteditable="true">2026-0413</span></p>
+            </div>
+            <div style="text-align: right; font-size: 12px; line-height: 1.6;">
+                <strong>Date Issued:</strong> <span id="currentDate"></span><br>
+                <strong>DP Payment Date:</strong> <span contenteditable="true" style="color:var(--inkvento-pink); font-weight:bold;">Apr 13, 2026</span>
+            </div>
+        </div>
+
+        <div class="grid-info">
+            <div class="label">Client:</div> <div class="field" id="clientName" contenteditable="true">CLIENT NAME / COMPANY</div>
+            <div class="label">Contact:</div> <div class="field" id="contactPerson" contenteditable="true">[Name/Viber]</div>
+            <div class="label">Timeline:</div> <div class="field" contenteditable="true">5-7 Working Days (Standard)</div>
+            <div class="label">Target Date:</div> <div class="field" contenteditable="true">April 20, 2026</div>
+        </div>
+
+        <table id="invoiceTable">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right price-col">Price</th>
+                    <th class="text-right total-col">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td contenteditable="true">Item Name Here</td>
+                    <td contenteditable="true" class="text-right qty" oninput="doMath()">10</td>
+                    <td contenteditable="true" class="text-right price price-col" oninput="doMath()">385.00</td>
+                    <td class="text-right total-col row-total">3,850.00</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="btn no-print" style="background:#eee; color:#666; font-size: 9px; padding: 5px 10px;" onclick="addRow()">+ Add Line Item</button>
+
+        <div class="payment-summary">
+            <div class="status-box">
+                <strong>📌 PRODUCTION CHECKLIST:</strong><br><br>
+                ✅ Layout Submitted: <span contenteditable="true">Apr 13, 2026</span><br>
+                ✅ DP Settled: <span contenteditable="true">Apr 13, 2026</span><br><br>
+                <i style="color:#666;">* Production starts ONLY upon completion of the items above. Remaining balance is due before delivery/turnover.</i>
+                
+                <div style="margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; font-weight: bold; color: var(--inkvento-pink);">
+                    Viber: 09938351638 | inkventoph@gmail.com
+                </div>
+            </div>
+
+            <div class="totals-container">
+                <div class="row grand">
+                    <span>GRAND TOTAL</span>
+                    <span>₱ <span id="subTotal">3,850.00</span></span>
+                </div>
+                <div class="row dp">
+                    <span>DOWNPAYMENT PAID</span>
+                    <span>₱ <span id="amtPaid" contenteditable="true" oninput="doMath()">1,155.00</span></span>
+                </div>
+                <div class="row balance">
+                    <span>BALANCE DUE</span>
+                    <span>₱ <span id="balAmount">2,695.00</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw8L07SesMIBbSgU1XZbRh2Xy2bABY3Arnsz4MLV0-SFfYiycoJIT8FGwv_mmr5EZGKEw/exec";
+
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    function doMath() {
+        let grand = 0;
+        document.querySelectorAll("#invoiceTable tbody tr").forEach(row => {
+            let q = parseFloat(row.querySelector(".qty").innerText.replace(/,/g,'')) || 0;
+            let p = parseFloat(row.querySelector(".price").innerText.replace(/,/g,'')) || 0;
+            let t = q * p;
+            row.querySelector(".row-total").innerText = t.toLocaleString(undefined, {minimumFractionDigits: 2});
+            grand += t;
+        });
+        let paid = parseFloat(document.getElementById('amtPaid').innerText.replace(/,/g,'')) || 0;
+        document.getElementById("subTotal").innerText = grand.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById("balAmount").innerText = (grand - paid).toLocaleString(undefined, {minimumFractionDigits: 2});
+    }
+
+    function addRow() {
+        const table = document.getElementById("invoiceTable").getElementsByTagName('tbody')[0];
+        const row = table.insertRow();
+        row.innerHTML = `<td contenteditable="true">New Item</td><td contenteditable="true" class="text-right qty" oninput="doMath()">1</td><td contenteditable="true" class="text-right price price-col" oninput="doMath()">0.00</td><td class="text-right total-col row-total">0.00</td>`;
+    }
+
+    function logToSheet() {
+        let orderSummary = "";
+        document.querySelectorAll("#invoiceTable tbody tr").forEach(row => {
+            let desc = row.cells[0].innerText;
+            let qty = row.cells[1].innerText;
+            orderSummary += `${qty}x ${desc} | `;
+        });
+        const data = {
+            inv: document.getElementById('invNum').innerText,
+            client: document.getElementById('clientName').innerText,
+            total: document.getElementById('subTotal').innerText,
+            paid: document.getElementById('amtPaid').innerText,
+            bal: document.getElementById('balAmount').innerText,
+            orders: orderSummary
+        };
+        fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(data), mode: "no-cors" })
+        .then(() => alert("Sale logged! 🚀"));
+    }
+
+    function downloadJPG() {
+        const area = document.getElementById('captureArea');
+        html2canvas(area, { scale: 2, useCORS: true, allowTaint: true }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Inkvento_Invoice_${document.getElementById('invNum').innerText}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+        });
+    }
+</script>
+</body>
+</html>
